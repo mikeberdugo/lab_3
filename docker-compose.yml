@@ -1,0 +1,104 @@
+version: "3.2"
+services:
+  broker:
+    container_name: 'rabbit'
+    image: rabbit_image
+    restart: always 
+    ports:
+        - 1883:1883
+        - 5672:5672
+        - 15672:15672
+    build: 
+      context: .
+      dockerfile: rabbitmq/Dockerfile
+    environment:
+            - "RABBITMQ_DEFAULT_PASS=pass"
+            - "RABBITMQ_DEFAULT_USER=user"
+    networks:
+      default:
+        aliases:
+          - rabbit
+
+
+
+#---------------------------------------------------------
+
+
+  database:
+    container_name: influx
+    image: influx_image
+    restart: always 
+    ports:
+        - 8086:8086
+    build: 
+      context: .
+      dockerfile: influx/Dockerfile
+    env_file:
+      - influx/setup.env
+    networks:
+      default:
+        aliases:
+          - influx
+
+#---------------------------------------------------------
+  
+
+  gui:
+    container_name: grafana
+    image: grafana-image
+    restart: always
+    ports:
+      - "3000:3000"
+    build:
+      context: .
+      dockerfile: grafana/Dockerfile
+    volumes:
+      - ./grafana/influx.yml:/etc/grafana/provisioning/datasources/influx.yml
+      - ./grafana/grafana.yml:/etc/grafana/provisioning/dashboards/grafana.yml
+      - ./grafana/:/var/lib/grafana/dashboards/
+    depends_on:
+      - database
+    env_file:
+      - grafana/setup.env
+#---------------------------------------------------------
+  telegraf:
+    container_name: telegraf
+    image: telegraf-image
+    restart: always
+    build:
+      context: .
+      dockerfile: telegra/Dockerfile
+    volumes:
+      - ./telegra/tele.conf:/etc/telegraf/telegraf.conf
+    depends_on:
+      - database
+
+##---------------------------------------------
+
+  analitica:
+    container_name: analitica
+    image: analitica_image
+    restart: always
+    build:
+      context: .
+      dockerfile: analitica/Dockerfile
+    depends_on:
+      - database
+      - broker
+    links:
+      - database
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
